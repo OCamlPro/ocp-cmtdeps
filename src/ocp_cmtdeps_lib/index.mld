@@ -1,0 +1,9 @@
+{1 Library ocp_deps_lib}
+
+This is the description
+of the ocp-deps OCaml project
+
+
+
+The entry point of this library is the module: {!Ocp_deps_lib}.
+
