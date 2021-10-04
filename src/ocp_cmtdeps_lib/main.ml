@@ -60,8 +60,8 @@ let main () =
       "--filenames", Arg.Set use_filenames,
       " Display filenames instead of modnames in deps.pdf";
 
-      "--png", Arg.Unit (fun () -> format := "png"),
-      " Generate deps.png instead of deps.pdf";
+      "--format", Arg.String (fun s -> format := s),
+      "FORMAT Generate deps.FORMAT instead of deps.pdf (using FORMAT encoding)";
     ]
     (fun s ->
        Printf.eprintf "Error: unexpected argument %S\n%!" s;
