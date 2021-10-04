@@ -241,12 +241,7 @@ let view g =
       Sys.remove (filename^".ps");
       raise e
 
-let dot2ps ~dotfile ~outfile =
+let dot2file ~dotfile ~format ~outfile =
   let e = Sys.command (
-      Printf.sprintf "dot -Tps < %s > %s" dotfile outfile) in
-  if e <> 0 then failwith "Ocamldot: error while dot was processing file"
-
-let dot2pdf ~dotfile ~outfile =
-  let e = Sys.command (
-      Printf.sprintf "dot -Tpdf < %s > %s" dotfile outfile) in
+      Printf.sprintf "dot -T%s < %s > %s" dotfile format outfile) in
   if e <> 0 then failwith "Ocamldot: error while dot was processing file"

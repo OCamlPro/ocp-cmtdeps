@@ -71,5 +71,6 @@ val rename_node : node -> string -> unit
 val save : graph -> string -> unit
 val save_in : graph -> out_channel -> unit
 val view : graph -> unit
-val dot2ps : dotfile:string -> outfile:string -> unit
-val dot2pdf : dotfile:string -> outfile:string -> unit
+
+(* format: ps, pdf, png *)
+val dot2file : dotfile:string -> format:string -> outfile:string -> unit

@@ -54,10 +54,14 @@ let find_module modname =
 
 let main () =
 
+  let format = ref "pdf" in
   Arg.parse
     [
       "--filenames", Arg.Set use_filenames,
       " Display filenames instead of modnames in deps.pdf";
+
+      "--png", Arg.Unit (fun () -> format := "png"),
+      " Generate deps.png instead of deps.pdf";
     ]
     (fun s ->
        Printf.eprintf "Error: unexpected argument %S\n%!" s;
@@ -141,6 +145,7 @@ let main () =
     ) sorted ;
 
   Ez_dot.V1.save graph "deps.dot" ;
-  Ez_dot.V1.dot2pdf ~dotfile:"deps.dot" ~outfile:"deps.pdf";
-  Printf.eprintf "Generated deps.dot and deps.pdf\n%!";
+  let outfile = "deps." ^ !format in
+  Ez_dot.V1.dot2file ~dotfile:"deps.dot" ~format:!format ~outfile;
+  Printf.eprintf "Generated deps.dot and %S\n%!" outfile;
   ()
