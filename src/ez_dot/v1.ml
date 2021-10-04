@@ -243,5 +243,5 @@ let view g =
 
 let dot2file ~dotfile ~format ~outfile =
   let e = Sys.command (
-      Printf.sprintf "dot -T%s < %s > %s" dotfile format outfile) in
+      Printf.sprintf "dot -T%s < %s > %s" format dotfile outfile) in
   if e <> 0 then failwith "Ocamldot: error while dot was processing file"
