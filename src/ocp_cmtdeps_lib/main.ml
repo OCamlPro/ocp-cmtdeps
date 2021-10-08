@@ -11,6 +11,7 @@
 (**************************************************************************)
 
 open Cmt_format
+open Cmi_format
 open EzCompat
 
 let use_filenames = ref false
@@ -55,6 +56,8 @@ let find_module modname =
 let main () =
 
   let format = ref "pdf" in
+  let use_cmis = ref false in
+  let all_links = ref false in
   Arg.parse
     [
       "--filenames", Arg.Set use_filenames,
@@ -62,6 +65,9 @@ let main () =
 
       "--format", Arg.String (fun s -> format := s),
       "FORMAT Generate deps.FORMAT instead of deps.pdf (using FORMAT encoding)";
+
+      "--cmi", Arg.Set use_cmis, " Use .cmi files";
+      "--all", Arg.Set all_links, " Keep all links";
     ]
     (fun s ->
        Printf.eprintf "Error: unexpected argument %S\n%!" s;
@@ -73,37 +79,63 @@ let main () =
   in
   let f filename =
     Printf.eprintf "Binary: %S\n%!" filename ;
-    let _cmi, cmt = Cmt_format.read filename in
-    match cmt with
-    | None -> ()
-    | Some cmt ->
-        let m = find_module cmt.cmt_modname in
-        begin
-          match cmt.cmt_sourcefile with
-          | None -> ()
-          | Some filename ->
-              match m.dot with
-              | Some _ -> ()
-              | None ->
-                  m.dot <- Some ( Ez_dot.V1.node graph
-                                    (if !use_filenames then
-                                       filename
-                                     else
-                                       m.name ) [] );
-                  m.filenames <- filename :: m.filenames ;
-                  source_modules := m :: !source_modules
-        end;
-        List.iter (fun (name, _crc_opt) ->
+    let cmi, cmt = Cmt_format.read filename in
+    begin
+      match cmt with
+      | Some cmt ->
+          let m = find_module cmt.cmt_modname in
+          begin
+            match cmt.cmt_sourcefile with
+            | None -> ()
+            | Some filename ->
+                match m.dot with
+                | Some _ -> ()
+                | None ->
+                    m.dot <- Some ( Ez_dot.V1.node graph
+                                      (if !use_filenames then
+                                         filename
+                                       else
+                                         m.name ) [] );
+                    m.filenames <- filename :: m.filenames ;
+                    source_modules := m :: !source_modules
+          end;
+          let add_dep name =
+            Printf.eprintf "   add_dep %S\n%!" name;
             if name <> m.name
             && EzString.chop_prefix ~prefix:( name ^ "__" ) m.name = None
             then
               m.deps <- StringMap.add name (find_module name) m.deps
-          ) cmt.cmt_imports ;
-        ()
-  in
-  EzFile.iter_dir "." ~f
-    ~select: ( EzFile.select ~deep:true ~glob:"*.cmt*" () ) ;
+          in
+          List.iter (fun (name, _crc_opt) -> add_dep name) cmt.cmt_imports ;
+          ()
+      | None ->
+          match cmi with
+          | None -> ()
+          | Some cmi ->
+              if !use_cmis then
+                let m = find_module cmi.cmi_name in
+                begin
+                  match m.dot with
+                  | Some _ -> ()
+                  | None ->
+                      m.dot <- Some ( Ez_dot.V1.node graph m.name []);
+                      source_modules := m :: !source_modules
+                end;
+                List.iter (fun (name, _crc_opt) ->
+                    if name <> m.name
+                    && EzString.chop_prefix ~prefix:( name ^ "__" ) m.name = None
+                    then
+                      m.deps <- StringMap.add name (find_module name) m.deps
+                  ) cmi.cmi_crcs ;
+                ()
 
+    end
+  in
+  begin
+    let glob = if !use_cmis then "*.cmi" else "*.cmt*" in
+    EzFile.iter_dir "." ~f
+      ~select: ( EzFile.select ~deep:true ~glob () ) ;
+  end;
   EzFile.iter_dir "." ~f:add_source
     ~select: ( EzFile.select ~deep:true ~glob:"*.ml*" ~ignore:"_*" () ) ;
 
@@ -113,17 +145,18 @@ let main () =
       Printf.eprintf "Cycle: %s\n%!" m.name;
     ) cycles ;
 
-  List.iter (fun m ->
-      StringMap.iter (fun _ m2 ->
-          match m2.dot with
-          | None -> ()
-          | Some _ ->
-              StringMap.iter (fun name _ ->
-                  if StringMap.mem name m.deps then
-                    m.deps <- StringMap.remove name m.deps
-                ) m2.deps
-        ) m.deps ;
-    ) ( List.rev sorted ) ;
+  if not !all_links then
+    List.iter (fun m ->
+        StringMap.iter (fun _ m2 ->
+            match m2.dot with
+            | None -> ()
+            | Some _ ->
+                StringMap.iter (fun name _ ->
+                    if StringMap.mem name m.deps then
+                      m.deps <- StringMap.remove name m.deps
+                  ) m2.deps
+          ) m.deps ;
+      ) ( List.rev sorted ) ;
 
   List.iter (fun m ->
       match m.dot with
